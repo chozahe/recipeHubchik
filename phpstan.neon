@@ -1,0 +1,18 @@
+parameters:
+    level: 10
+
+    paths:
+        - src
+
+    symfony:
+        containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
+        consoleApplicationLoader: tests/console-application.php
+
+    # Дополнительные проверки
+    checkMissingCallableSignature: true
+    checkMissingVarTagTypehint: true
+    checkUninitializedProperties: true
+    checkDynamicProperties: true
+    checkImplicitMixed: true
+    reportMaybesInMethodSignatures: true
+    reportStaticMethodSignatures: true

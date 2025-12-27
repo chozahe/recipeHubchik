@@ -1,0 +1,47 @@
+{% set hasFilters = currentFilter and not currentFilter.isEmpty %}
+
+{% if hasFilters %}
+    <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-6">
+        <div class="flex items-center justify-between mb-2">
+            <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">Активные фильтры:</h3>
+            <a href="{{ path('app_recipes_list') }}" class="text-sm text-blue-600 dark:text-blue-400 hover:underline">
+                Сбросить все
+            </a>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+            {% if currentFilter.name %}
+                {% set newQuery = app.request.query.all|merge({'name': null}) %}
+                <a href="{{ path('app_recipes_list', newQuery) }}" class="inline-flex items-center gap-1 px-3 py-1 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 rounded-full border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <span>Название: {{ currentFilter.name }}</span>
+                    <span class="text-gray-400">×</span>
+                </a>
+            {% endif %}
+
+            {% if currentFilter.authorId %}
+                {% set newQuery = app.request.query.all|merge({'author': null}) %}
+                <a href="{{ path('app_recipes_list', newQuery) }}" class="inline-flex items-center gap-1 px-3 py-1 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 rounded-full border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <span>Автор ID: {{ currentFilter.authorId }}</span>
+                    <span class="text-gray-400">×</span>
+                </a>
+            {% endif %}
+
+            {% if currentFilter.minRating %}
+                {% set newQuery = app.request.query.all|merge({'min_rating': null}) %}
+                <a href="{{ path('app_recipes_list', newQuery) }}" class="inline-flex items-center gap-1 px-3 py-1 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 rounded-full border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <span>Рейтинг: {{ currentFilter.minRating }}+</span>
+                    <span class="text-gray-400">×</span>
+                </a>
+            {% endif %}
+
+            {% for ingredient in currentFilter.ingredients %}
+                {% set newIngredients = currentFilter.ingredients|filter(i => i != ingredient) %}
+                {% set newQuery = app.request.query.all|merge({'ingredients': newIngredients}) %}
+                <a href="{{ path('app_recipes_list', newQuery) }}" class="inline-flex items-center gap-1 px-3 py-1 bg-white dark:bg-gray-800 text-sm text-gray-700 dark:text-gray-300 rounded-full border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <span>Ингредиент: {{ ingredient }}</span>
+                    <span class="text-gray-400">×</span>
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+{% endif %}

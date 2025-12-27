@@ -1,0 +1,133 @@
+<div class="bg-white dark:bg-gray-900 rounded-lg shadow-md dark:shadow-lg p-6 mb-6">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Фильтры и сортировка</h2>
+
+    <form method="get" action="{{ path('app_recipes_list') }}" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {# Поиск по названию #}
+            <div>
+                <label for="filter-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Поиск по названию
+                </label>
+                <input
+                    type="text"
+                    id="filter-name"
+                    name="name"
+                    value="{{ app.request.query.get('name') }}"
+                    placeholder="Например: пицца"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                >
+            </div>
+
+            {# Сортировка #}
+            <div>
+                <label for="filter-sort" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Сортировка
+                </label>
+                <select
+                    id="filter-sort"
+                    name="sort"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                >
+                    {% set currentSort = app.request.query.get('sort', 'created_desc') %}
+                    <option value="created_desc" {% if currentSort == 'created_desc' %}selected{% endif %}>По дате (новые первые)</option>
+                    <option value="created_asc" {% if currentSort == 'created_asc' %}selected{% endif %}>По дате (старые первые)</option>
+                    <option value="rating_desc" {% if currentSort == 'rating_desc' %}selected{% endif %}>По рейтингу (высокий → низкий)</option>
+                    <option value="rating_asc" {% if currentSort == 'rating_asc' %}selected{% endif %}>По рейтингу (низкий → высокий)</option>
+                    <option value="name_asc" {% if currentSort == 'name_asc' %}selected{% endif %}>По названию (А-Я)</option>
+                    <option value="name_desc" {% if currentSort == 'name_desc' %}selected{% endif %}>По названию (Я-А)</option>
+                </select>
+            </div>
+
+            {# Минимальный рейтинг #}
+            <div>
+                <label for="filter-rating" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Минимальный рейтинг
+                </label>
+                <select
+                    id="filter-rating"
+                    name="min_rating"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                >
+                    {% set currentRating = app.request.query.get('min_rating') %}
+                    <option value="">Любой рейтинг</option>
+                    <option value="4.5" {% if currentRating == '4.5' %}selected{% endif %}>★★★★★ 4.5+</option>
+                    <option value="4.0" {% if currentRating == '4.0' %}selected{% endif %}>★★★★☆ 4.0+</option>
+                    <option value="3.0" {% if currentRating == '3.0' %}selected{% endif %}>★★★☆☆ 3.0+</option>
+                    <option value="2.0" {% if currentRating == '2.0' %}selected{% endif %}>★★☆☆☆ 2.0+</option>
+                </select>
+            </div>
+
+            {# Ингредиенты (упрощенный вариант с текстовыми полями) #}
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Ингредиенты (через запятую)
+                </label>
+                <input
+                    type="text"
+                    name="ingredients_text"
+                    id="ingredients-text"
+                    value="{{ app.request.query.all('ingredients')|join(', ') }}"
+                    placeholder="Например: помидор, сыр, базилик"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                >
+            </div>
+
+            {# Автор (ID пользователя - упрощенный вариант) #}
+            <div>
+                <label for="filter-author" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    ID автора
+                </label>
+                <input
+                    type="number"
+                    id="filter-author"
+                    name="author"
+                    value="{{ app.request.query.get('author') }}"
+                    placeholder="ID пользователя"
+                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                >
+            </div>
+        </div>
+
+        <div class="flex gap-2">
+            <button
+                type="submit"
+                class="px-6 py-2 bg-blue-600 dark:bg-blue-700 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 font-medium transition"
+            >
+                Применить фильтры
+            </button>
+            <a
+                href="{{ path('app_recipes_list') }}"
+                class="px-6 py-2 bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-600 font-medium transition"
+            >
+                Сбросить
+            </a>
+        </div>
+    </form>
+</div>
+
+{# JavaScript для преобразования текста ингредиентов в массив #}
+<script>
+document.querySelector('form').addEventListener('submit', function(e) {
+    const ingredientsText = document.getElementById('ingredients-text').value;
+    if (ingredientsText) {
+        e.preventDefault();
+
+        // Разбить текст по запятым и создать скрытые поля
+        const ingredients = ingredientsText.split(',').map(s => s.trim()).filter(s => s);
+
+        // Удалить текстовое поле из отправки
+        document.getElementById('ingredients-text').name = '';
+
+        // Добавить скрытые поля для каждого ингредиента
+        ingredients.forEach(ingredient => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ingredients[]';
+            input.value = ingredient;
+            this.appendChild(input);
+        });
+
+        this.submit();
+    }
+});
+</script>
