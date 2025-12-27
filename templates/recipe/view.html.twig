@@ -109,6 +109,15 @@
                 </div>
             </div>
         </div>
+
+        {# Секция отзывов #}
+        <div class="bg-white dark:bg-gray-900 rounded-lg shadow-md dark:shadow-lg p-8 mt-6">
+            {% include 'review/_reviews_list.html.twig' with {
+                recipe: recipe,
+                reviews: recipe.reviews,
+                canUserReview: app.user ? canUserReview : false
+            } %}
+        </div>
     </div>
 </div>
 {% endblock %}
