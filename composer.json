@@ -88,8 +88,6 @@
             "@cs:check",
             "@phpstan"
         ],
-        "pre-commit:fix": "bash fix-code.sh",
-        "hooks:install": "chmod +x .git/hooks/pre-commit"
     },
     "conflict": {
         "symfony/symfony": "*"
