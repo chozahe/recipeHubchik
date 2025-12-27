@@ -9,11 +9,11 @@ use App\Enum\RecipeSortOption;
 readonly class RecipeFilterDto
 {
     /**
-     * @param array<string> $ingredients
+     * @param list<int> $ingredientIds
      */
     public function __construct(
         public ?string $name = null,
-        public array $ingredients = [],
+        public array $ingredientIds = [],
         public ?int $authorId = null,
         public ?float $minRating = null,
         public RecipeSortOption $sort = RecipeSortOption::CREATED_DESC,
@@ -22,7 +22,7 @@ readonly class RecipeFilterDto
     public function isEmpty(): bool
     {
         return null === $this->name
-            && [] === $this->ingredients
+            && [] === $this->ingredientIds
             && null === $this->authorId
             && null === $this->minRating;
     }

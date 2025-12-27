@@ -10,25 +10,20 @@ use App\Dto\RecipeIngredientDto;
 use App\Entity\Recipe;
 use App\Enum\RecipeSortOption;
 use App\Form\RecipeFormType;
-use App\Repository\IngredientRepository;
 use App\Service\RecipeListService;
 use App\Service\RecipeService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-use function array_map;
 use function max;
-use function strlen;
 
 class RecipeController extends AbstractController
 {
     public function __construct(
         private readonly RecipeService $recipeService,
-        private readonly IngredientRepository $ingredientRepository,
     ) {}
 
     #[Route('/recipes/create', name: 'app_recipe_create', methods: ['GET', 'POST'])]
@@ -53,20 +48,6 @@ class RecipeController extends AbstractController
         return $this->render('recipe/create.html.twig', [
             'form' => $form,
         ]);
-    }
-
-    #[Route('/api/ingredients/search', name: 'app_ingredients_search', methods: ['GET'])]
-    public function searchIngredients(Request $request): JsonResponse
-    {
-        $query = $request->query->get('q', '');
-
-        if (strlen($query) < 2) {
-            return $this->json([]);
-        }
-
-        $ingredients = $this->ingredientRepository->searchByName($query, 10);
-
-        return $this->json(array_map(static fn ($ing) => $ing->getName(), $ingredients));
     }
 
     #[Route('/recipes/my', name: 'app_recipes_my', methods: ['GET'])]
@@ -152,11 +133,11 @@ class RecipeController extends AbstractController
         $minRatingParam = $request->query->get('min_rating');
         $minRating = null !== $minRatingParam && '' !== $minRatingParam ? (float) $minRatingParam : null;
 
-        /** @var string[] $ingredients */
-        $ingredients = $request->query->all('ingredients');
+        /** @var list<int> $ingredientIds */
+        $ingredientIds = $request->query->all('ingredients');
         $filter = new RecipeFilterDto(
             name: '' !== $request->query->getString('name') ? $request->query->getString('name') : null,
-            ingredients: $ingredients,
+            ingredientIds: $ingredientIds,
             authorId: $authorId,
             minRating: $minRating,
             sort: RecipeSortOption::fromString($request->query->getString('sort')),

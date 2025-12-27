@@ -102,14 +102,14 @@ class RecipeRepository extends ServiceEntityRepository
             }
 
             // Фильтр по ингредиентам
-            if (!([] === $filter->ingredients)) {
+            if (!([] === $filter->ingredientIds)) {
                 $qb->innerJoin('r.recipeIngredients', 'ri')
                     ->innerJoin('ri.ingredient', 'i')
-                    ->andWhere('i.name IN (:ingredients)')
-                    ->setParameter('ingredients', $filter->ingredients)
+                    ->andWhere('i.id IN (:ingredientIds)')
+                    ->setParameter('ingredientIds', $filter->ingredientIds)
                     ->groupBy('r.id', 'u.id')
                     ->having('COUNT(DISTINCT i.id) = :ingredientCount')
-                    ->setParameter('ingredientCount', count($filter->ingredients));
+                    ->setParameter('ingredientCount', count($filter->ingredientIds));
             }
 
             // Фильтр по автору
