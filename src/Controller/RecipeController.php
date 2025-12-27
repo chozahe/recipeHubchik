@@ -12,6 +12,7 @@ use App\Enum\RecipeSortOption;
 use App\Form\RecipeFormType;
 use App\Service\RecipeListService;
 use App\Service\RecipeService;
+use App\Service\ReviewService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -24,6 +25,7 @@ class RecipeController extends AbstractController
 {
     public function __construct(
         private readonly RecipeService $recipeService,
+        private readonly ReviewService $reviewService,
     ) {}
 
     #[Route('/recipes/create', name: 'app_recipe_create', methods: ['GET', 'POST'])]
@@ -117,8 +119,16 @@ class RecipeController extends AbstractController
     #[IsGranted('RECIPE_VIEW', subject: 'recipe')]
     public function view(Recipe $recipe): Response
     {
+        $canUserReview = false;
+        $user = $this->getUser();
+
+        if ($user instanceof \App\Entity\User) {
+            $canUserReview = $this->reviewService->canUserReview($recipe, $user);
+        }
+
         return $this->render('recipe/view.html.twig', [
             'recipe' => $recipe,
+            'canUserReview' => $canUserReview,
         ]);
     }
 
