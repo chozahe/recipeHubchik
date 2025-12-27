@@ -57,19 +57,46 @@
                 </select>
             </div>
 
-            {# Ингредиенты (упрощенный вариант с текстовыми полями) #}
-            <div class="md:col-span-2">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Ингредиенты (через запятую)
+            {# Ингредиенты (с автодополнением) #}
+            <div
+                data-controller="ingredient-autocomplete"
+                class="md:col-span-2 lg:col-span-3"
+            >
+                <label for="filter-ingredient-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Ингредиенты
                 </label>
-                <input
-                    type="text"
-                    name="ingredients_text"
-                    id="ingredients-text"
-                    value="{{ app.request.query.all('ingredients')|join(', ') }}"
-                    placeholder="Например: помидор, сыр, базилик"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                >
+
+                {# Список выбранных ингредиентов #}
+                <div
+                    data-ingredient-autocomplete-target="selectedList"
+                    class="mb-2 flex flex-wrap gap-2 min-h-[2rem]"
+                ></div>
+
+                {# Поле ввода для поиска #}
+                <div class="relative">
+                    <input
+                        type="text"
+                        id="filter-ingredient-input"
+                        data-ingredient-autocomplete-target="input"
+                        data-action="input->ingredient-autocomplete#onInput keydown->ingredient-autocomplete#onKeydown"
+                        placeholder="Начните вводить название ингредиента"
+                        autocomplete="off"
+                        class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                    >
+
+                    {# Выпадающий список результатов #}
+                    <div
+                        data-ingredient-autocomplete-target="dropdown"
+                        class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden"
+                    ></div>
+                </div>
+
+                {# Скрытые поля для отправки ID ингредиентов #}
+                <div data-ingredient-autocomplete-target="hiddenContainer">
+                    {% for ingredientId in app.request.query.all('ingredients') %}
+                        <input type="hidden" name="ingredients[]" value="{{ ingredientId }}">
+                    {% endfor %}
+                </div>
             </div>
 
             {# Автор (с автодополнением) #}
@@ -134,33 +161,8 @@
     </form>
 </div>
 
-{# JavaScript для преобразования текста ингредиентов в массив #}
+{# JavaScript для инициализации автодополнения автора при загрузке страницы #}
 <script>
-document.querySelector('form').addEventListener('submit', function(e) {
-    const ingredientsText = document.getElementById('ingredients-text').value;
-    if (ingredientsText) {
-        e.preventDefault();
-
-        // Разбить текст по запятым и создать скрытые поля
-        const ingredients = ingredientsText.split(',').map(s => s.trim()).filter(s => s);
-
-        // Удалить текстовое поле из отправки
-        document.getElementById('ingredients-text').name = '';
-
-        // Добавить скрытые поля для каждого ингредиента
-        ingredients.forEach(ingredient => {
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'ingredients[]';
-            input.value = ingredient;
-            this.appendChild(input);
-        });
-
-        this.submit();
-    }
-});
-
-// Инициализация автодополнения автора при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
     const authorIdField = document.querySelector('[data-author-autocomplete-target="hiddenId"]');
     const authorInputField = document.querySelector('[data-author-autocomplete-target="input"]');
