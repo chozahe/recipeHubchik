@@ -72,19 +72,48 @@
                 >
             </div>
 
-            {# Автор (ID пользователя - упрощенный вариант) #}
-            <div>
-                <label for="filter-author" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    ID автора
+            {# Автор (с автодополнением) #}
+            <div
+                data-controller="author-autocomplete"
+                class="relative"
+            >
+                <label for="filter-author-input" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Автор рецепта
                 </label>
+                <div class="relative">
+                    <input
+                        type="text"
+                        id="filter-author-input"
+                        data-author-autocomplete-target="input"
+                        data-action="input->author-autocomplete#onInput keydown->author-autocomplete#onKeydown"
+                        placeholder="Начните вводить имя автора"
+                        autocomplete="off"
+                        class="w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
+                    >
+                    <button
+                        type="button"
+                        data-author-autocomplete-target="clearButton"
+                        data-action="click->author-autocomplete#clearSelection"
+                        class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hidden"
+                        title="Очистить"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                {# Скрытое поле для отправки ID автора #}
                 <input
-                    type="number"
-                    id="filter-author"
+                    type="hidden"
                     name="author"
+                    data-author-autocomplete-target="hiddenId"
                     value="{{ app.request.query.get('author') }}"
-                    placeholder="ID пользователя"
-                    class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
                 >
+                {# Выпадающий список результатов #}
+                <div
+                    data-author-autocomplete-target="dropdown"
+                    class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto hidden"
+                ></div>
             </div>
         </div>
 
@@ -128,6 +157,46 @@ document.querySelector('form').addEventListener('submit', function(e) {
         });
 
         this.submit();
+    }
+});
+
+// Инициализация автодополнения автора при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    const authorIdField = document.querySelector('[data-author-autocomplete-target="hiddenId"]');
+    const authorInputField = document.querySelector('[data-author-autocomplete-target="input"]');
+    const clearButton = document.querySelector('[data-author-autocomplete-target="clearButton"]');
+
+    // Если есть выбранный автор (из query параметра), загружаем его имя
+    if (authorIdField && authorInputField && authorIdField.value) {
+        const authorId = authorIdField.value;
+
+        // Загружаем имя автора через API
+        fetch(`/api/users/search?q=&id=${authorId}`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(users => {
+            if (users.length > 0) {
+                const author = users[0];
+                authorInputField.value = author.name;
+                authorInputField.dataset.selectedName = author.name;
+                if (clearButton) {
+                    clearButton.classList.remove('hidden');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Failed to load author name:', error);
+            // Оставляем ID в скрытом поле, но показываем ID в видимом поле
+            authorInputField.value = `ID: ${authorId}`;
+        });
     }
 });
 </script>

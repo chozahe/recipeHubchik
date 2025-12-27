@@ -146,7 +146,6 @@ class RecipeController extends AbstractController
     {
         $page = max(1, $request->query->getInt('page', 1));
 
-        // Построить DTO фильтра из query параметров
         $authorParam = $request->query->get('author');
         $authorId = null !== $authorParam && '' !== $authorParam ? (int) $authorParam : null;
 

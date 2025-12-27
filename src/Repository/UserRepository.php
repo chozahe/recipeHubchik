@@ -33,4 +33,23 @@ class UserRepository extends ServiceEntityRepository
         $this->getEntityManager()->persist($user);
         $this->getEntityManager()->flush();
     }
+
+    /**
+     * Поиск пользователей по имени (частичное совпадение, без учёта регистра).
+     *
+     * @return list<User>
+     */
+    public function searchByName(string $query, int $limit = 10): array
+    {
+        /** @var list<User> $result */
+        $result = $this->createQueryBuilder('u')
+            ->where('LOWER(u.name) LIKE LOWER(:query)')
+            ->setParameter('query', '%' . $query . '%')
+            ->setMaxResults($limit)
+            ->orderBy('u.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $result;
+    }
 }
