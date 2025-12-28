@@ -6,7 +6,9 @@ namespace App\Service;
 
 use App\Dto\UserSearchRequestDto;
 use App\Dto\UserSearchResultDto;
+use App\Entity\User;
 use App\Repository\UserRepository;
+use Doctrine\ORM\EntityManagerInterface;
 
 use function array_map;
 use function strlen;
@@ -15,6 +17,7 @@ final readonly class UserService
 {
     public function __construct(
         private UserRepository $userRepository,
+        private EntityManagerInterface $entityManager,
     ) {}
 
     /**
@@ -35,5 +38,25 @@ final readonly class UserService
             ),
             $users
         );
+    }
+
+    public function banUser(User $user): void
+    {
+        $user->setIsActive(false);
+        $this->entityManager->flush();
+    }
+
+    public function unbanUser(User $user): void
+    {
+        $user->setIsActive(true);
+        $this->entityManager->flush();
+    }
+
+    /**
+     * @return list<User>
+     */
+    public function findAllUsers(): array
+    {
+        return $this->userRepository->findAllOrderedByCreatedAt();
     }
 }

@@ -57,4 +57,18 @@ class UserRepository extends ServiceEntityRepository
 
         return $result;
     }
+
+    /**
+     * @return list<User>
+     */
+    public function findAllOrderedByCreatedAt(): array
+    {
+        /** @var list<User> $result */
+        $result = $this->createQueryBuilder('u')
+            ->orderBy('u.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        return $result;
+    }
 }
