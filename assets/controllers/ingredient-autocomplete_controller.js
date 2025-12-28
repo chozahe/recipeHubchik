@@ -189,8 +189,11 @@ export default class extends Controller {
 
         if (this.selectedIngredients.size === 0) {
             this.selectedListTarget.innerHTML = `
-                <div class="text-sm text-gray-500 dark:text-gray-400">
-                    Ингредиенты не выбраны
+                <div class="flex items-center gap-2 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span>Ингредиенты не выбраны</span>
                 </div>
             `;
             return;
@@ -198,13 +201,16 @@ export default class extends Controller {
 
         this.selectedIngredients.forEach((ingredient) => {
             const badge = document.createElement('div');
-            badge.className = 'inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm';
+            badge.className = 'group inline-flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950/30 dark:to-amber-950/30 border border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-200 rounded-lg text-sm font-medium shadow-sm hover:shadow-md transition-all';
             badge.innerHTML = `
-                <span>${this.escapeHtml(ingredient.name)}</span>
+                <svg class="w-4 h-4 text-orange-500 dark:text-orange-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                </svg>
+                <span class="truncate max-w-xs">${this.escapeHtml(ingredient.name)}</span>
                 <button
                     type="button"
                     data-ingredient-id="${ingredient.id}"
-                    class="ml-1 hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5 transition-colors"
+                    class="ml-1 p-0.5 text-orange-400 hover:text-red-500 dark:text-orange-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded transition-all"
                     title="Удалить"
                 >
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
