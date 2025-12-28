@@ -9,6 +9,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\Question;
@@ -88,6 +89,7 @@ class CreateAdminCommand extends Command
 
         // Запрос пароля
         $questionHelper = $this->getHelper('question');
+        assert($questionHelper instanceof QuestionHelper);
         $passwordQuestion = new Question('Пароль (минимум 8 символов, буквы и цифры): ');
         $passwordQuestion->setHidden(true);
         $passwordQuestion->setHiddenFallback(false);
