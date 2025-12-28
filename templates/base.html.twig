@@ -26,6 +26,9 @@
                         <a href="/recipes" class="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition">Рецепты</a>
                         {% if app.user %}
                             <a href="/recipes/my" class="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition">Мои рецепты</a>
+                            {% if is_granted('ROLE_ADMIN') %}
+                                <a href="/admin/users" class="text-gray-700 dark:text-gray-300 hover:text-orange-600 dark:hover:text-orange-400 transition">Админ-панель</a>
+                            {% endif %}
                         {% endif %}
                     </div>
                 </div>
