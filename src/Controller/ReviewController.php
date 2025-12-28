@@ -8,8 +8,11 @@ use App\Dto\CreateReviewDto;
 use App\Entity\Recipe;
 use App\Entity\Review;
 use App\Form\ReviewFormType;
+use App\Service\ContentModerationService;
 use App\Service\ReviewService;
+use App\Service\UserService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -19,6 +22,9 @@ final class ReviewController extends AbstractController
 {
     public function __construct(
         private readonly ReviewService $reviewService,
+        private readonly ContentModerationService $contentModerationService,
+        private readonly UserService $userService,
+        private readonly Security $security,
     ) {}
 
     #[Route('/recipes/{id}/reviews/create', name: 'app_review_create', methods: ['GET', 'POST'])]
@@ -40,6 +46,19 @@ final class ReviewController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // Проверяем комментарий на наличие нецензурной лексики
+            if (null !== $dto->comment && $this->contentModerationService->containsProfanity($dto->comment)) {
+                // Баним пользователя
+                $this->userService->banUser($user);
+
+                // Разлогиниваем пользователя
+                $this->security->logout(false);
+
+                $this->addFlash('error', 'Ваш аккаунт заблокирован за использование нецензурной лексики в отзыве');
+
+                return $this->redirectToRoute('app_recipe_view', ['id' => $recipe->getId()]);
+            }
+
             $this->reviewService->createReview($dto, $recipe, $user);
 
             $this->addFlash('success', 'Отзыв успешно создан');
@@ -71,6 +90,22 @@ final class ReviewController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            /** @var \App\Entity\User $currentUser */
+            $currentUser = $this->getUser();
+
+            // Проверяем комментарий на наличие нецензурной лексики
+            if (null !== $dto->comment && $this->contentModerationService->containsProfanity($dto->comment)) {
+                // Баним пользователя
+                $this->userService->banUser($currentUser);
+
+                // Разлогиниваем пользователя
+                $this->security->logout(false);
+
+                $this->addFlash('error', 'Ваш аккаунт заблокирован за использование нецензурной лексики в отзыве');
+
+                return $this->redirectToRoute('app_recipe_view', ['id' => $recipe->getId()]);
+            }
+
             $this->reviewService->updateReview($review, $dto);
 
             $this->addFlash('success', 'Отзыв успешно обновлен');
