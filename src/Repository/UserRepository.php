@@ -34,6 +34,11 @@ class UserRepository extends ServiceEntityRepository
         $this->getEntityManager()->flush();
     }
 
+    public function findById(int $id): ?User
+    {
+        return $this->find($id);
+    }
+
     /**
      * Поиск пользователей по имени (частичное совпадение, без учёта регистра).
      *

@@ -51,6 +51,28 @@ class IngredientRepository extends ServiceEntityRepository
     }
 
     /**
+     * @param list<int> $ids
+     *
+     * @return list<Ingredient>
+     */
+    public function findByIds(array $ids): array
+    {
+        if ([] === $ids) {
+            return [];
+        }
+
+        /** @var list<Ingredient> $result */
+        $result = $this->createQueryBuilder('i')
+            ->where('i.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->orderBy('i.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        return $result;
+    }
+
+    /**
      * @return list<Ingredient>
      */
     public function searchByName(string $query, int $limit = 10): array
