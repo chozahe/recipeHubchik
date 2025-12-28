@@ -8,6 +8,7 @@ use App\Dto\RegisterUserDto;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use Exception;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 readonly class RegistrationService
@@ -15,6 +16,7 @@ readonly class RegistrationService
     public function __construct(
         private UserRepository $userRepository,
         private UserPasswordHasherInterface $passwordHasher,
+        private LoggerInterface $logger,
     ) {}
 
     /**
@@ -27,6 +29,8 @@ readonly class RegistrationService
         $password = $dto->password;
 
         if ($this->userRepository->emailExists($email)) {
+            $this->logger->warning('Registration failed: email already exists', ['email' => $email]);
+
             throw new Exception('Этот email уже зарегистрирован');
         }
 
@@ -38,6 +42,8 @@ readonly class RegistrationService
         $user->setPassword($hashedPassword);
 
         $this->userRepository->save($user);
+
+        $this->logger->info('User registered successfully', ['user_id' => $user->getId(), 'email' => $email, 'name' => $name]);
 
         return $user;
     }

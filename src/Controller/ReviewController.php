@@ -7,12 +7,15 @@ namespace App\Controller;
 use App\Dto\CreateReviewDto;
 use App\Entity\Recipe;
 use App\Entity\Review;
+use App\Entity\User;
 use App\Form\ReviewFormType;
 use App\Service\ContentModerationService;
 use App\Service\ReviewService;
 use App\Service\UserService;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -25,13 +28,15 @@ final class ReviewController extends AbstractController
         private readonly ContentModerationService $contentModerationService,
         private readonly UserService $userService,
         private readonly Security $security,
+        #[Autowire(service: 'monolog.logger.moderation')]
+        private readonly LoggerInterface $logger,
     ) {}
 
     #[Route('/recipes/{id}/reviews/create', name: 'app_review_create', methods: ['GET', 'POST'])]
     #[IsGranted('IS_AUTHENTICATED_FULLY')]
     public function create(Recipe $recipe, Request $request): Response
     {
-        /** @var \App\Entity\User $user */
+        /** @var User $user */
         $user = $this->getUser();
 
         if (!$this->reviewService->canUserReview($recipe, $user)) {
@@ -48,6 +53,15 @@ final class ReviewController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             // Проверяем комментарий на наличие нецензурной лексики
             if (null !== $dto->comment && $this->contentModerationService->containsProfanity($dto->comment)) {
+                $this->logger->critical('User auto-banned for profanity in review', [
+                    'user_id' => $user->getId(),
+                    'user_email' => $user->getEmail(),
+                    'recipe_id' => $recipe->getId(),
+                    'recipe_title' => $recipe->getTitle(),
+                    'ip' => $request->getClientIp(),
+                    'action' => 'create_review',
+                ]);
+
                 // Баним пользователя
                 $this->userService->banUser($user);
 
@@ -59,6 +73,12 @@ final class ReviewController extends AbstractController
             }
 
             $this->reviewService->createReview($dto, $recipe, $user);
+
+            $this->logger->info('Review created', [
+                'user_id' => $user->getId(),
+                'recipe_id' => $recipe->getId(),
+                'rating' => $dto->rating,
+            ]);
 
             $this->addFlash('success', 'Отзыв успешно создан');
 
@@ -89,11 +109,21 @@ final class ReviewController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            /** @var \App\Entity\User $currentUser */
+            /** @var User $currentUser */
             $currentUser = $this->getUser();
 
             // Проверяем комментарий на наличие нецензурной лексики
             if (null !== $dto->comment && $this->contentModerationService->containsProfanity($dto->comment)) {
+                $this->logger->critical('User auto-banned for profanity in review edit', [
+                    'user_id' => $currentUser->getId(),
+                    'user_email' => $currentUser->getEmail(),
+                    'review_id' => $review->getId(),
+                    'recipe_id' => $recipe->getId(),
+                    'recipe_title' => $recipe->getTitle(),
+                    'ip' => $request->getClientIp(),
+                    'action' => 'edit_review',
+                ]);
+
                 // Баним пользователя
                 $this->userService->banUser($currentUser);
 
@@ -105,6 +135,13 @@ final class ReviewController extends AbstractController
             }
 
             $this->reviewService->updateReview($review, $dto);
+
+            $this->logger->info('Review updated', [
+                'review_id' => $review->getId(),
+                'user_id' => $currentUser->getId(),
+                'recipe_id' => $recipe->getId(),
+                'rating' => $dto->rating,
+            ]);
 
             $this->addFlash('success', 'Отзыв успешно обновлен');
 
@@ -129,6 +166,13 @@ final class ReviewController extends AbstractController
         $recipeId = $recipe->getId();
 
         if ($this->isCsrfTokenValid('delete-review-' . $review->getId(), $request->request->getString('_token'))) {
+            $currentUser = $this->getUser();
+            $this->logger->info('Review deleted', [
+                'review_id' => $review->getId(),
+                'recipe_id' => $recipeId,
+                'deleted_by_user_id' => $currentUser instanceof User ? $currentUser->getId() : null,
+            ]);
+
             $this->reviewService->deleteReview($review);
             $this->addFlash('success', 'Отзыв успешно удален');
         } else {

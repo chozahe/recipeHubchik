@@ -12,7 +12,9 @@ use App\Entity\User;
 use App\Repository\IngredientRepository;
 use App\Repository\RecipeIngredientRepository;
 use App\Repository\RecipeRepository;
+use Psr\Log\LoggerInterface;
 
+use function count;
 use function trim;
 
 readonly class RecipeService
@@ -21,6 +23,7 @@ readonly class RecipeService
         private RecipeRepository $recipeRepository,
         private IngredientRepository $ingredientRepository,
         private RecipeIngredientRepository $recipeIngredientRepository,
+        private LoggerInterface $logger,
     ) {}
 
     public function createRecipe(CreateRecipeDto $dto, User $user): Recipe
@@ -48,11 +51,14 @@ readonly class RecipeService
             $this->recipeIngredientRepository->save($recipeIngredient);
         }
 
+        $this->logger->info('Recipe created', ['recipe_id' => $recipe->getId(), 'user_id' => $user->getId(), 'title' => $dto->title, 'ingredients_count' => count($dto->ingredients)]);
+
         return $recipe;
     }
 
     public function deleteRecipe(Recipe $recipe): void
     {
+        $this->logger->info('Recipe deleted', ['recipe_id' => $recipe->getId(), 'title' => $recipe->getTitle(), 'user_id' => $recipe->getUser()?->getId()]);
         $this->recipeRepository->delete($recipe);
     }
 
@@ -80,6 +86,8 @@ readonly class RecipeService
         }
 
         $this->recipeRepository->save($recipe);
+
+        $this->logger->info('Recipe updated', ['recipe_id' => $recipe->getId(), 'title' => $dto->title, 'ingredients_count' => count($dto->ingredients)]);
 
         return $recipe;
     }

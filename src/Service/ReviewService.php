@@ -11,6 +11,7 @@ use App\Entity\User;
 use App\Repository\RecipeRepository;
 use App\Repository\ReviewRepository;
 use DateTimeImmutable;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 
 final readonly class ReviewService
@@ -18,10 +19,13 @@ final readonly class ReviewService
     public function __construct(
         private ReviewRepository $reviewRepository,
         private RecipeRepository $recipeRepository,
+        private LoggerInterface $logger,
     ) {}
 
     public function createReview(CreateReviewDto $dto, Recipe $recipe, User $user): Review
     {
+        $oldRating = $recipe->getAverageRating();
+
         $review = new Review(
             rating: $dto->rating,
             comment: $dto->comment,
@@ -31,6 +35,10 @@ final readonly class ReviewService
 
         $this->reviewRepository->save($review);
         $this->recalculateRecipeRating($recipe);
+
+        $newRating = $recipe->getAverageRating();
+
+        $this->logger->info('Review created in service', ['review_id' => $review->getId(), 'user_id' => $user->getId(), 'recipe_id' => $recipe->getId(), 'rating' => $dto->rating, 'old_rating' => $oldRating, 'new_rating' => $newRating]);
 
         return $review;
     }
@@ -42,12 +50,18 @@ final readonly class ReviewService
             throw new RuntimeException('Review must have associated recipe');
         }
 
+        $oldRating = $recipe->getAverageRating();
+
         $review->setRating($dto->rating);
         $review->setComment($dto->comment);
         $review->setUpdatedAt(new DateTimeImmutable());
 
         $this->reviewRepository->save($review);
         $this->recalculateRecipeRating($recipe);
+
+        $newRating = $recipe->getAverageRating();
+
+        $this->logger->info('Review updated', ['review_id' => $review->getId(), 'user_id' => $review->getUser()?->getId(), 'recipe_id' => $recipe->getId(), 'rating' => $dto->rating, 'old_rating' => $oldRating, 'new_rating' => $newRating]);
 
         return $review;
     }
@@ -59,8 +73,15 @@ final readonly class ReviewService
             throw new RuntimeException('Review must have associated recipe');
         }
 
+        $reviewId = $review->getId();
+        $oldRating = $recipe->getAverageRating();
+
         $this->reviewRepository->delete($review);
         $this->recalculateRecipeRating($recipe);
+
+        $newRating = $recipe->getAverageRating();
+
+        $this->logger->info('Review deleted', ['review_id' => $reviewId, 'user_id' => $review->getUser()?->getId(), 'recipe_id' => $recipe->getId(), 'old_rating' => $oldRating, 'new_rating' => $newRating]);
     }
 
     public function findUserReview(Recipe $recipe, User $user): ?Review

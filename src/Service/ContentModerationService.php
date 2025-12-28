@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Service;
 
+use Psr\Log\LoggerInterface;
 use RuntimeException;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 use function file;
 use function file_exists;
 use function mb_strtolower;
+use function mb_substr;
 use function preg_match;
 use function preg_quote;
 use function sprintf;
@@ -27,6 +30,8 @@ final class ContentModerationService
 
     public function __construct(
         private readonly string $profanityWordsFilePath,
+        #[Autowire(service: 'monolog.logger.moderation')]
+        private readonly LoggerInterface $logger,
     ) {
         $this->profanityWords = $this->loadProfanityWords();
     }
@@ -49,6 +54,11 @@ final class ContentModerationService
             $pattern = '/(^|[^\wа-яёА-ЯЁ])' . preg_quote($word, '/') . '(?=[^\wа-яёА-ЯЁ]|$)/ui';
 
             if (1 === preg_match($pattern, $lowercaseText)) {
+                $this->logger->warning('Profanity detected', [
+                    'matched_word' => $word,
+                    'text_preview' => mb_substr($text, 0, 100),
+                ]);
+
                 return true;
             }
         }

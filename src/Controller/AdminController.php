@@ -6,7 +6,9 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Service\UserService;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -20,6 +22,8 @@ final class AdminController extends AbstractController
 {
     public function __construct(
         private readonly UserService $userService,
+        #[Autowire(service: 'monolog.logger.security')]
+        private readonly LoggerInterface $logger,
     ) {}
 
     #[Route('/users', name: 'app_admin_users', methods: ['GET'])]
@@ -50,6 +54,15 @@ final class AdminController extends AbstractController
             return $this->redirectToRoute('app_admin_users');
         }
 
+        $admin = $this->getUser();
+        $this->logger->warning('Admin banned user', [
+            'admin_id' => $admin instanceof User ? $admin->getId() : null,
+            'admin_email' => $admin instanceof User ? $admin->getEmail() : 'unknown',
+            'banned_user_id' => $user->getId(),
+            'banned_user_email' => $user->getEmail(),
+            'ip' => $request->getClientIp(),
+        ]);
+
         $this->userService->banUser($user);
         $this->addFlash('success', 'Пользователь успешно заблокирован');
 
@@ -73,6 +86,15 @@ final class AdminController extends AbstractController
 
             return $this->redirectToRoute('app_admin_users');
         }
+
+        $admin = $this->getUser();
+        $this->logger->info('Admin unbanned user', [
+            'admin_id' => $admin instanceof User ? $admin->getId() : null,
+            'admin_email' => $admin instanceof User ? $admin->getEmail() : 'unknown',
+            'unbanned_user_id' => $user->getId(),
+            'unbanned_user_email' => $user->getEmail(),
+            'ip' => $request->getClientIp(),
+        ]);
 
         $this->userService->unbanUser($user);
         $this->addFlash('success', 'Пользователь успешно разблокирован');

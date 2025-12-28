@@ -6,6 +6,8 @@ namespace App\Security;
 
 use App\Entity\User;
 use App\Repository\UserRepository;
+use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -30,6 +32,8 @@ class LoginFormAuthenticator extends AbstractAuthenticator
     public function __construct(
         private UserRepository $userRepository,
         private UrlGeneratorInterface $urlGenerator,
+        #[Autowire(service: 'monolog.logger.security')]
+        private readonly LoggerInterface $logger,
     ) {}
 
     public function supports(Request $request): ?bool
@@ -44,15 +48,31 @@ class LoginFormAuthenticator extends AbstractAuthenticator
         $password = (string) $request->request->get('_password', '');
         $csrfToken = $request->request->get('_csrf_token');
 
+        $this->logger->info('Login attempt', [
+            'email' => $email,
+            'ip' => $request->getClientIp(),
+        ]);
+
         return new Passport(
-            new UserBadge($email, function (string $userIdentifier): User {
+            new UserBadge($email, function (string $userIdentifier) use ($request): User {
                 $user = $this->userRepository->findOneBy(['email' => $userIdentifier]);
 
                 if (null === $user) {
+                    $this->logger->warning('Login failed: user not found', [
+                        'email' => $userIdentifier,
+                        'ip' => $request->getClientIp(),
+                    ]);
+
                     throw new CustomUserMessageAuthenticationException('Неверный email или пароль');
                 }
 
                 if (!$user->isActive()) {
+                    $this->logger->warning('Login blocked: user banned', [
+                        'user_id' => $user->getId(),
+                        'email' => $user->getEmail(),
+                        'ip' => $request->getClientIp(),
+                    ]);
+
                     throw new CustomUserMessageAuthenticationException('Ваш аккаунт заблокирован. Обратитесь к администратору.');
                 }
 
@@ -68,6 +88,15 @@ class LoginFormAuthenticator extends AbstractAuthenticator
 
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
     {
+        $user = $token->getUser();
+        if ($user instanceof User) {
+            $this->logger->info('Login successful', [
+                'user_id' => $user->getId(),
+                'email' => $user->getEmail(),
+                'ip' => $request->getClientIp(),
+            ]);
+        }
+
         $targetPath = $this->getTargetPath($request->getSession(), $firewallName);
 
         if (null !== $targetPath) {
@@ -82,6 +111,11 @@ class LoginFormAuthenticator extends AbstractAuthenticator
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
+        $this->logger->warning('Login failed: invalid credentials', [
+            'email' => $request->request->get('_username'),
+            'ip' => $request->getClientIp(),
+        ]);
+
         $request->getSession()->set('_security.last_error', $exception);
 
         return new RedirectResponse(
