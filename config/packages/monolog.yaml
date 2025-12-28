@@ -1,0 +1,98 @@
+monolog:
+    channels:
+        - deprecation # Deprecations are logged in the dedicated "deprecation" channel when it exists
+        - security    # Аутентификация, блокировки пользователей
+        - moderation  # Модерация контента, обнаружение мата
+
+when@dev:
+    monolog:
+        handlers:
+            main:
+                type: stream
+                path: "%kernel.logs_dir%/app.log"
+                level: info
+                channels: ["!event", "!doctrine", "!console"]
+
+            security:
+                type: stream
+                path: "%kernel.logs_dir%/security.log"
+                level: info
+                channels: ["security"]
+                formatter: monolog.formatter.json
+
+            moderation:
+                type: stream
+                path: "%kernel.logs_dir%/moderation.log"
+                level: warning
+                channels: ["moderation"]
+                formatter: monolog.formatter.json
+
+            critical:
+                type: stream
+                path: "%kernel.logs_dir%/critical.log"
+                level: critical
+                channels: ["!event"]
+
+            console:
+                type: console
+                process_psr_3_messages: false
+                channels: ["!event", "!doctrine"]
+
+when@test:
+    monolog:
+        handlers:
+            main:
+                type: fingers_crossed
+                action_level: error
+                handler: nested
+                excluded_http_codes: [404, 405]
+                channels: ["!event"]
+            nested:
+                type: stream
+                path: "%kernel.logs_dir%/%kernel.environment%.log"
+                level: debug
+
+when@prod:
+    monolog:
+        handlers:
+            main:
+                type: rotating_file
+                path: "%kernel.logs_dir%/app.log"
+                level: warning
+                max_files: 30
+                channels: ["!event", "!doctrine", "!console"]
+
+            security:
+                type: rotating_file
+                path: "%kernel.logs_dir%/security.log"
+                level: info
+                max_files: 90
+                channels: ["security"]
+                formatter: monolog.formatter.json
+
+            moderation:
+                type: rotating_file
+                path: "%kernel.logs_dir%/moderation.log"
+                level: warning
+                max_files: 60
+                channels: ["moderation"]
+                formatter: monolog.formatter.json
+
+            critical:
+                type: rotating_file
+                path: "%kernel.logs_dir%/critical.log"
+                level: critical
+                max_files: 180
+                channels: ["!event"]
+                formatter: monolog.formatter.json
+
+            console:
+                type: console
+                process_psr_3_messages: false
+                channels: ["!event", "!doctrine"]
+
+            deprecation:
+                type: stream
+                channels: [deprecation]
+                path: php://stderr
+                formatter: monolog.formatter.json
