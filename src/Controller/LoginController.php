@@ -6,21 +6,29 @@ namespace App\Controller;
 
 use LogicException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
-class LoginController extends AbstractController
+final class LoginController extends AbstractController
 {
     #[Route('/login', name: 'app_login', methods: ['GET', 'POST'])]
-    public function login(AuthenticationUtils $authenticationUtils): Response
+    public function login(Request $request, AuthenticationUtils $authenticationUtils): Response
     {
         $error = $authenticationUtils->getLastAuthenticationError();
         $lastUsername = $authenticationUtils->getLastUsername();
 
+        // Проверяем, был ли пользователь забанен
+        $bannedMessage = null;
+        if (1 === $request->query->getInt('banned')) {
+            $bannedMessage = 'Ваш аккаунт заблокирован за использование нецензурной лексики в отзыве';
+        }
+
         return $this->render('login/login.html.twig', [
             'last_username' => $lastUsername,
             'error' => $error,
+            'banned_message' => $bannedMessage,
         ]);
     }
 

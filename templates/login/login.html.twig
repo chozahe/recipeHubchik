@@ -9,6 +9,12 @@
             <h1 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">RecipeHub</h1>
             <p class="text-gray-600 dark:text-gray-200 mb-6">Введите ваши учётные данные</p>
 
+            {% if banned_message %}
+                <div class="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-lg p-4 mb-6">
+                    <p class="text-red-800 dark:text-red-200">{{ banned_message }}</p>
+                </div>
+            {% endif %}
+
             {% if error %}
                 <div class="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-700 rounded-lg p-4 mb-6">
                     <p class="text-red-800 dark:text-red-200">{{ error.messageKey|trans(error.messageData, 'security') }}</p>

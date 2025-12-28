@@ -54,9 +54,8 @@ final class ReviewController extends AbstractController
                 // Разлогиниваем пользователя
                 $this->security->logout(false);
 
-                $this->addFlash('error', 'Ваш аккаунт заблокирован за использование нецензурной лексики в отзыве');
-
-                return $this->redirectToRoute('app_recipe_view', ['id' => $recipe->getId()]);
+                // Перенаправляем на страницу логина с параметром banned=1
+                return $this->redirectToRoute('app_login', ['banned' => 1]);
             }
 
             $this->reviewService->createReview($dto, $recipe, $user);
@@ -101,9 +100,8 @@ final class ReviewController extends AbstractController
                 // Разлогиниваем пользователя
                 $this->security->logout(false);
 
-                $this->addFlash('error', 'Ваш аккаунт заблокирован за использование нецензурной лексики в отзыве');
-
-                return $this->redirectToRoute('app_recipe_view', ['id' => $recipe->getId()]);
+                // Перенаправляем на страницу логина с параметром banned=1
+                return $this->redirectToRoute('app_login', ['banned' => 1]);
             }
 
             $this->reviewService->updateReview($review, $dto);
