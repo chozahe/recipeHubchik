@@ -70,6 +70,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Review::class, mappedBy: 'user')]
     private Collection $reviews;
 
+    #[ORM\Column]
+    private bool $isActive = true;
+
     public function __construct(
         string $email = '',
         string $name = '',
@@ -201,6 +204,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function removeReview(Review $review): static
     {
         $this->reviews->removeElement($review);
+
+        return $this;
+    }
+
+    public function isActive(): bool
+    {
+        return $this->isActive;
+    }
+
+    public function setIsActive(bool $isActive): static
+    {
+        $this->isActive = $isActive;
 
         return $this;
     }
