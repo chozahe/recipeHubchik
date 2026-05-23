@@ -29,19 +29,17 @@ WORKDIR /app
 COPY package.json package-lock.json webpack.config.js postcss.config.mjs ./
 COPY assets ./assets
 COPY public ./public
+COPY src ./src
+COPY templates ./templates
 COPY --from=composer_stage /app/vendor ./vendor
 
 RUN npm ci \
     && npm run build
 
-FROM php:8.5-cli AS runtime
+FROM dunglas/frankenphp:php8.5-alpine AS runtime
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends bash libpq-dev libicu-dev postgresql-client \
-    && docker-php-ext-install intl pdo_pgsql \
-    && apt-mark manual libicu76 libpq5 \
-    && apt-get purge -y --auto-remove libpq-dev libicu-dev \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache bash postgresql-client \
+    && install-php-extensions intl pdo_pgsql
 
 WORKDIR /app
 
@@ -50,6 +48,7 @@ ENV APP_ENV=prod
 COPY --from=composer_stage /app ./
 COPY --from=node_stage /app/public/build ./public/build
 COPY docker/app/entrypoint.sh /usr/local/bin/recipehub-entrypoint
+COPY docker/app/Caddyfile /etc/caddy/Caddyfile
 
 RUN chmod +x /usr/local/bin/recipehub-entrypoint \
     && mkdir -p var/cache var/log /var/log/recipehub \
@@ -58,4 +57,4 @@ RUN chmod +x /usr/local/bin/recipehub-entrypoint \
 EXPOSE 8080
 
 ENTRYPOINT ["recipehub-entrypoint"]
-CMD ["php", "-S", "0.0.0.0:8080", "-t", "public"]
+CMD ["frankenphp", "run", "--config", "/etc/caddy/Caddyfile"]

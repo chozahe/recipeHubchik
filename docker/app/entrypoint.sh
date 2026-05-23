@@ -56,7 +56,7 @@ done
 php bin/console doctrine:migrations:migrate --no-interaction
 
 if [ "$#" -eq 0 ]; then
-    set -- php -S 0.0.0.0:8080 -t public
+    set -- frankenphp run --config /etc/caddy/Caddyfile
 fi
 
 exec "$@"
