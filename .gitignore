@@ -29,3 +29,4 @@ yarn-error.log
 ###< symfony/webpack-encore-bundle ###
 .claude-code-style.md
 CLAUDE.md
+/AGENTS.md

@@ -1,0 +1,28 @@
+# VCS and agent metadata
+.git
+.agents
+
+# Local dependencies built inside Docker stages
+node_modules
+vendor
+
+# Symfony runtime files
+var/cache
+var/log
+
+# Local environment overrides and secrets
+.env.local
+.env.*.local
+
+# Generated/frontend artifacts and report assets
+public/build
+docs/screenshots
+
+# Tooling caches and local noise
+.php-cs-fixer.cache
+.phpstan.cache
+npm-debug.log
+yarn-error.log
+.DS_Store
+.idea
+.vscode

@@ -1,3 +1,7 @@
+parameters:
+    app.default_log_dir: '%kernel.logs_dir%'
+    app.default_log_level: 'info'
+
 monolog:
     channels:
         - deprecation # Deprecations are logged in the dedicated "deprecation" channel when it exists
@@ -56,33 +60,30 @@ when@prod:
     monolog:
         handlers:
             main:
-                type: rotating_file
-                path: "%kernel.logs_dir%/app.log"
-                level: warning
-                max_files: 30
+                type: stream
+                path: "%env(default:app.default_log_dir:LOG_DIR)%/app.log"
+                level: "%env(default:app.default_log_level:LOG_LEVEL)%"
                 channels: ["!event", "!doctrine", "!console"]
+                formatter: monolog.formatter.json
 
             security:
-                type: rotating_file
-                path: "%kernel.logs_dir%/security.log"
-                level: info
-                max_files: 90
+                type: stream
+                path: "%env(default:app.default_log_dir:LOG_DIR)%/security.log"
+                level: "%env(default:app.default_log_level:LOG_LEVEL)%"
                 channels: ["security"]
                 formatter: monolog.formatter.json
 
             moderation:
-                type: rotating_file
-                path: "%kernel.logs_dir%/moderation.log"
-                level: warning
-                max_files: 60
+                type: stream
+                path: "%env(default:app.default_log_dir:LOG_DIR)%/moderation.log"
+                level: "%env(default:app.default_log_level:LOG_LEVEL)%"
                 channels: ["moderation"]
                 formatter: monolog.formatter.json
 
             critical:
-                type: rotating_file
-                path: "%kernel.logs_dir%/critical.log"
+                type: stream
+                path: "%env(default:app.default_log_dir:LOG_DIR)%/critical.log"
                 level: critical
-                max_files: 180
                 channels: ["!event"]
                 formatter: monolog.formatter.json
 

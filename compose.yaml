@@ -1,25 +1,42 @@
-
 services:
-###> doctrine/doctrine-bundle ###
-  database:
-    image: postgres:${POSTGRES_VERSION:-16}-alpine
+  app:
+    image: ${RECIPEHUB_IMAGE:-recipehub-app:latest}
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-app}
-      # You should definitely change the password in production
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
-      POSTGRES_USER: ${POSTGRES_USER:-app}
+      APP_ENV: prod
+      DATABASE_URL: "postgresql://recipehub:recipehub_password@postgres:5432/recipehub?serverVersion=16&charset=utf8"
+      LOG_DIR: /var/log/recipehub
+      LOG_LEVEL: info
+    ports:
+      - "8080:8080"
+    volumes:
+      - recipehub_logs:/var/log/recipehub
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: recipehub
+      POSTGRES_USER: recipehub
+      POSTGRES_PASSWORD: recipehub_password
     healthcheck:
-      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-app}", "-U", "${POSTGRES_USER:-app}"]
+      test: ["CMD-SHELL", "pg_isready -U recipehub -d recipehub"]
+      interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 60s
+      start_period: 10s
     volumes:
-      - database_data:/var/lib/postgresql/data:rw
-      # You may use a bind-mounted host directory instead, so that it is harder to accidentally remove the volume and lose all your data!
-      # - ./docker/db/data:/var/lib/postgresql/data:rw
-###< doctrine/doctrine-bundle ###
+      - postgres_data:/var/lib/postgresql/data
+
+  loki:
+    image: grafana/loki:2.9.8
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./docker/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki_data:/loki
 
 volumes:
-###> doctrine/doctrine-bundle ###
-  database_data:
-###< doctrine/doctrine-bundle ###
+  postgres_data:
+  recipehub_logs:
+  loki_data:
