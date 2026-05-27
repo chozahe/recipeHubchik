@@ -22,10 +22,13 @@ parse_database_url() {
     ' "$1"
 }
 
-DB_HOST="${POSTGRES_HOST:-$(parse_database_url host)}"
-DB_PORT="${POSTGRES_PORT:-$(parse_database_url port)}"
-DB_USER="${POSTGRES_USER:-$(parse_database_url user)}"
-DB_NAME="${POSTGRES_DB:-$(parse_database_url dbname)}"
+# Kubernetes automatically injects POSTGRES_PORT=tcp://... for a Service named
+# "postgres". Do not use POSTGRES_* here for parsing connection details: the
+# application DATABASE_URL is the single source of truth.
+DB_HOST="${RECIPEHUB_DB_HOST:-$(parse_database_url host)}"
+DB_PORT="${RECIPEHUB_DB_PORT:-$(parse_database_url port)}"
+DB_USER="${RECIPEHUB_DB_USER:-$(parse_database_url user)}"
+DB_NAME="${RECIPEHUB_DB_NAME:-$(parse_database_url dbname)}"
 
 DB_HOST="${DB_HOST:-postgres}"
 DB_PORT="${DB_PORT:-5432}"

@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: recipehub-app
+  namespace: trofimov20260527
+  labels:
+    app.kubernetes.io/name: recipehub-app
+    app.kubernetes.io/part-of: recipehub
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: recipehub-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: recipehub-app
+        app.kubernetes.io/part-of: recipehub
+    spec:
+      containers:
+        - name: app
+          image: recipehub-app:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: APP_ENV
+              value: prod
+            - name: DATABASE_URL
+              value: postgresql://recipehub:recipehub_password@postgres:5432/recipehub?serverVersion=16&charset=utf8
+            - name: LOG_DIR
+              value: /var/log/recipehub
+            - name: LOG_LEVEL
+              value: info
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 12
+          volumeMounts:
+            - name: recipehub-logs
+              mountPath: /var/log/recipehub
+        - name: promtail
+          image: grafana/promtail:2.9.8
+          imagePullPolicy: IfNotPresent
+          args:
+            - -config.file=/etc/promtail/promtail-config.yaml
+          volumeMounts:
+            - name: recipehub-logs
+              mountPath: /var/log/recipehub
+              readOnly: true
+            - name: promtail-config
+              mountPath: /etc/promtail/promtail-config.yaml
+              subPath: promtail-config.yaml
+              readOnly: true
+      volumes:
+        - name: recipehub-logs
+          emptyDir: {}
+        - name: promtail-config
+          configMap:
+            name: promtail-config

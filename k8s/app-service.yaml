@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: recipehub-app
+  namespace: trofimov20260527
+  labels:
+    app.kubernetes.io/name: recipehub-app
+    app.kubernetes.io/part-of: recipehub
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: recipehub-app
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
