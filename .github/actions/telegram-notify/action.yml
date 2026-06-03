@@ -19,7 +19,7 @@ runs:
   steps:
     - name: Send Telegram notification
       shell: bash
-      working-directory: RecipeHub
+      working-directory: .
       env:
         NOTIFY_STATUS: ${{ inputs.status }}
         NOTIFY_IMAGE: ${{ inputs.image }}
