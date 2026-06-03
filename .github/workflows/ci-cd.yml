@@ -67,8 +67,8 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
-      - name: Warm Symfony cache
-        run: php bin/console cache:warmup --env=test --no-debug
+      - name: Build Symfony dev container for PHPStan
+        run: APP_ENV=dev APP_DEBUG=1 php bin/console cache:warmup
 
       - name: Check PHP coding standards
         run: composer cs:check
