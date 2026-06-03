@@ -39,6 +39,7 @@ RUN npm ci \
 FROM dunglas/frankenphp:php8.5-alpine AS runtime
 
 RUN apk add --no-cache bash postgresql-client \
+    && apk upgrade --no-cache libxml2 \
     && install-php-extensions intl pdo_pgsql
 
 WORKDIR /app

@@ -46,8 +46,8 @@ class CreateAdminCommand extends Command
         $io->title('Создание администратора RecipeHub');
 
         // Запрос email
-        $email = $io->ask('Email администратора', null, static function (?string $value): string {
-            if (null === $value || '' === trim($value)) {
+        $email = $io->ask('Email администратора', null, static function (mixed $value): string {
+            if (!is_string($value) || '' === trim($value)) {
                 throw new RuntimeException('Email не может быть пустым');
             }
 
@@ -69,8 +69,8 @@ class CreateAdminCommand extends Command
         }
 
         // Запрос имени
-        $name = $io->ask('Имя администратора', null, static function (?string $value): string {
-            if (null === $value || '' === trim($value)) {
+        $name = $io->ask('Имя администратора', null, static function (mixed $value): string {
+            if (!is_string($value) || '' === trim($value)) {
                 throw new RuntimeException('Имя не может быть пустым');
             }
 
@@ -93,8 +93,8 @@ class CreateAdminCommand extends Command
         $passwordQuestion = new Question('Пароль (минимум 8 символов, буквы и цифры): ');
         $passwordQuestion->setHidden(true);
         $passwordQuestion->setHiddenFallback(false);
-        $passwordQuestion->setValidator(static function (?string $value): string {
-            if (null === $value || '' === trim($value)) {
+        $passwordQuestion->setValidator(static function (mixed $value): string {
+            if (!is_string($value) || '' === trim($value)) {
                 throw new RuntimeException('Пароль не может быть пустым');
             }
 
