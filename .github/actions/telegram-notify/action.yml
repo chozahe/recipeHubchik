@@ -1,0 +1,27 @@
+name: Telegram Notify
+description: Send RecipeHub GitHub Actions pipeline notifications to Telegram.
+
+inputs:
+  status:
+    description: Pipeline status to report.
+    required: true
+  image:
+    description: Docker image tag related to this pipeline run.
+    required: false
+    default: ''
+  extra-message:
+    description: Additional message appended to the notification.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Send Telegram notification
+      shell: bash
+      working-directory: RecipeHub
+      env:
+        NOTIFY_STATUS: ${{ inputs.status }}
+        NOTIFY_IMAGE: ${{ inputs.image }}
+        NOTIFY_EXTRA_MESSAGE: ${{ inputs.extra-message }}
+      run: ./scripts/ci/telegram-notify.sh

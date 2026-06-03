@@ -1,5 +1,7 @@
 {
     "type": "project",
+    "name": "recipehub/app",
+    "description": "Symfony recipe sharing application packaged for Docker and Kubernetes.",
     "license": "proprietary",
     "minimum-stability": "stable",
     "prefer-stable": true,

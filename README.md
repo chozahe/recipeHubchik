@@ -56,6 +56,52 @@ login:    admin
 password: admin
 ```
 
+## GitHub Actions CI/CD
+
+В проекте настроен workflow `RecipeHub CI/CD` в `.github/workflows/ci-cd.yml`. Внешний сервер для него не нужен: GitHub-hosted runner проверяет приложение, собирает production image и публикует готовый artifact в GitHub Container Registry.
+
+Pipeline запускается при:
+
+```text
+push в main/master/develop
+pull_request в main/master/develop
+push тегов v*
+ручном запуске workflow_dispatch
+```
+
+Этапы CI/CD:
+
+```text
+quality        - Composer validate, npm build, Symfony cache warmup, PHP CS Fixer dry-run, PHPStan
+docker-build   - сборка production Docker image из Dockerfile
+smoke-test     - запуск app + PostgreSQL через Docker Compose и проверка HTTP ответа /
+security-scan  - Trivy scan контейнера, HIGH/CRITICAL vulnerabilities и SARIF report
+notifications  - Telegram-уведомления о старте и результате workflow
+```
+
+Публикуемый image:
+
+```text
+ghcr.io/<owner>/recipehub:<tag>
+```
+
+Workflow создаёт tags для веток, pull requests, короткого SHA, release tags `v*`, а `latest` публикуется только для default branch. Для pull request из недоверенного контекста image не публикуется в GHCR: он собирается локально на runner и используется для smoke/security checks.
+
+Для Telegram-уведомлений нужно добавить GitHub Secrets:
+
+```text
+TELEGRAM_BOT_TOKEN
+TELEGRAM_CHAT_ID
+```
+
+Если secrets не заданы, CI/CD не падает: шаг уведомления пишет, что Telegram notification пропущен. Сообщение содержит проект, статус, ref, короткий SHA, автора запуска, event name, image tag и ссылку на GitHub Actions run.
+
+Ручной запуск:
+
+```text
+GitHub repository -> Actions -> RecipeHub CI/CD -> Run workflow
+```
+
 ## Запуск через Minikube
 
 Kubernetes namespace:

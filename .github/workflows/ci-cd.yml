@@ -1,0 +1,267 @@
+name: RecipeHub CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/recipehub
+  APP_ENV: test
+  APP_SECRET: ci-recipehub-secret
+  DATABASE_URL: postgresql://recipehub:recipehub_password@127.0.0.1:5432/recipehub?serverVersion=16&charset=utf8
+
+jobs:
+  notify-started:
+    name: Telegram notification started
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Notify started
+        uses: ./RecipeHub/.github/actions/telegram-notify
+        with:
+          status: started
+          extra-message: Pipeline started.
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+  quality:
+    name: Symfony and frontend quality
+    runs-on: ubuntu-latest
+    needs: notify-started
+    defaults:
+      run:
+        working-directory: RecipeHub
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup RecipeHub
+        uses: ./RecipeHub/.github/actions/setup-recipehub
+
+      - name: Validate Composer metadata
+        run: composer validate --strict
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Warm Symfony cache
+        run: php bin/console cache:warmup --env=test --no-debug
+
+      - name: Check PHP coding standards
+        run: composer cs:check
+
+      - name: Run PHPStan
+        run: composer phpstan
+
+  docker-build:
+    name: Build production image
+    runs-on: ubuntu-latest
+    needs: quality
+    outputs:
+      image: ${{ steps.image.outputs.name }}
+      primary-tag: ${{ steps.primary-tag.outputs.tag }}
+      pushed: ${{ steps.push-policy.outputs.push }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Decide push policy
+        id: push-policy
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "push=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "push=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Login to GitHub Container Registry
+        if: steps.push-policy.outputs.push == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,format=short
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Export image name
+        id: image
+        shell: bash
+        run: echo 'name=${{ env.IMAGE_NAME }}' >> "$GITHUB_OUTPUT"
+
+      - name: Select primary image tag
+        id: primary-tag
+        shell: bash
+        run: |
+          IFS= read -r first_tag <<< "$TAGS"
+          echo "tag=${first_tag}" >> "$GITHUB_OUTPUT"
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+
+      - name: Build and optionally publish Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: RecipeHub
+          file: RecipeHub/Dockerfile
+          platforms: linux/amd64
+          push: ${{ steps.push-policy.outputs.push == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  smoke-test:
+    name: Container smoke test
+    runs-on: ubuntu-latest
+    needs: docker-build
+    defaults:
+      run:
+        working-directory: RecipeHub
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        if: needs.docker-build.outputs.pushed == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull published image
+        if: needs.docker-build.outputs.pushed == 'true'
+        run: docker pull '${{ needs.docker-build.outputs.primary-tag }}'
+
+      - name: Build local smoke-test image for pull requests
+        if: needs.docker-build.outputs.pushed != 'true'
+        run: docker build -t recipehub-app:ci-smoke .
+
+      - name: Smoke test app with PostgreSQL
+        run: ./scripts/ci/smoke-test.sh
+        env:
+          RECIPEHUB_IMAGE: ${{ needs.docker-build.outputs.pushed == 'true' && needs.docker-build.outputs.primary-tag || 'recipehub-app:ci-smoke' }}
+
+  security-scan:
+    name: Trivy container scan
+    runs-on: ubuntu-latest
+    needs:
+      - docker-build
+      - smoke-test
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        if: needs.docker-build.outputs.pushed == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build local image for pull request scan
+        if: needs.docker-build.outputs.pushed != 'true'
+        run: docker build -t recipehub-app:ci-scan RecipeHub
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ needs.docker-build.outputs.pushed == 'true' && needs.docker-build.outputs.primary-tag || 'recipehub-app:ci-scan' }}
+          format: table
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+
+      - name: Generate Trivy SARIF report
+        if: always()
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ needs.docker-build.outputs.pushed == 'true' && needs.docker-build.outputs.primary-tag || 'recipehub-app:ci-scan' }}
+          format: sarif
+          output: trivy-results.sarif
+          vuln-type: os,library
+          severity: HIGH,CRITICAL
+          exit-code: '0'
+
+      - name: Upload Trivy SARIF report
+        if: always() && hashFiles('trivy-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+
+  notify-result:
+    name: Telegram notification result
+    runs-on: ubuntu-latest
+    needs:
+      - quality
+      - docker-build
+      - smoke-test
+      - security-scan
+    if: always()
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve workflow status
+        id: result
+        shell: bash
+        run: |
+          if [ "${{ contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            echo "status=cancelled" >> "$GITHUB_OUTPUT"
+          elif [ "${{ contains(needs.*.result, 'failure') }}" = "true" ]; then
+            echo "status=failure" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=success" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Notify result
+        uses: ./RecipeHub/.github/actions/telegram-notify
+        with:
+          status: ${{ steps.result.outputs.status }}
+          image: ${{ needs.docker-build.outputs.primary-tag }}
+          extra-message: Quality, image build, smoke test and security scan finished.
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
